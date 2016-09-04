@@ -1,0 +1,5 @@
+/SinaL2.egg-info/*
+/dist/*
+__pycache__/
+/log/*
+*.pyc
