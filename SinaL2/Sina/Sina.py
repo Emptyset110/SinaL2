@@ -9,7 +9,7 @@
 try:
     import dHydra.core.util as util
 except ImportError:
-    import util
+    from . import util
 from .Vendor import Vendor
 # --- 导入自定义配置
 from .connection import *

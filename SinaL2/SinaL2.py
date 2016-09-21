@@ -1,12 +1,15 @@
 # -*- coding: utf-8 -*-
 try:
+    from dHydra.core.Functions import *
+except ImportError:
+    pass
+try:
     import dHydra.core.util as util
 except ImportError:
     from . import util
-# 这里是因为如果不用dHydra框架则会import失败，直接import同级目录下的util
 try:
     from SinaL2.Sina.Sina import Sina
-except Exception as e:
+except ImportError:
     pass
 from datetime import datetime
 from .connection import *
@@ -26,7 +29,7 @@ import gc
 import os
 
 
-class SinaL2():
+class SinaL2:
 
     def __init__(
         self,
@@ -34,15 +37,20 @@ class SinaL2():
         pwd=None,
         symbols=None,
         hq='hq_pjb',
-        query=['quotation', 'deal'],  # ['quotation', 'orders', 'deal', 'info']
+        query=['quotation', 'transaction'],
+        # ['quotation', 'orders', 'transaction', 'info']
         on_recv_data=None,   # 收到数据以后的回调函数
         use_logger=True,
         **kwargs
     ):
+        super().__init__(**kwargs)
         self.on_recv_data = on_recv_data  # 回调函数
         self.ip = util.get_client_ip()
         self.hq = hq
         self.query = query
+
+        if use_logger:
+            self.logger = util.get_logger(self.__class__.__name__)
 
         # 如果是dHydra框架内调用，则直接用框架内的Sina类，
         # 否则作为独立的类在外部调用
@@ -51,9 +59,6 @@ class SinaL2():
         except Exception as e:
             self.sina = Sina()
         self.is_login = self.login()
-
-        # 初始化logger
-        self.logger = util.get_logger("SinaL2")
 
         if symbols is None:
             self.symbols = self.sina.get_symbols()
@@ -98,7 +103,7 @@ class SinaL2():
             if qlist != '':
                 qlist += ','
             qlist += "2cn_%s_orders" % (symbol)
-        if 'deal' in self.query:
+        if 'transaction' in self.query:
             if qlist != '':
                 qlist += ','
             qlist += "2cn_%s_0,2cn_%s_1" % (symbol, symbol)
@@ -202,7 +207,7 @@ class SinaL2():
         symbol_list = self.symbols
         # Cut symbol_list
         weight = (len(self.query) +
-                  1) if ('deal' in self.query) else len(self.query)
+                  1) if ('transaction' in self.query) else len(self.query)
         step = int(64 / weight)
         symbol_list_slice = [symbol_list[i: i + step]
                              for i in range(0, len(symbol_list), step)]

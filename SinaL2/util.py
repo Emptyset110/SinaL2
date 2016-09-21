@@ -18,34 +18,81 @@ from pymongo import MongoClient
 import re
 import random
 import json
+import logging
 
 
-def get_logger(logger_name):
+def camel_to_underscore(name):
+    pass
+
+
+def get_logger(
+    logger_name="main",
+    log_path="log",                     #
+    console_log=True,                   # 屏幕打印日志开关，默认True
+    console_log_level=logging.INFO,     # 屏幕打印日志的级别，默认为INFO
+    critical_log=False,                 # critica单独l写文件日志，默认关闭
+    error_log=True,                     # error级别单独写文件日志，默认开启
+    warning_log=False,                  # warning级别单独写日志，默认关闭
+    info_log=True,                      # info级别单独写日志，默认开启
+    debug_log=False,                    # debug级别日志，默认关闭
+):
     formatter = logging.Formatter(
         '%(asctime)s - %(name)s - %(lineno)d - %(levelname)s - %(message)s'
     )
     logger = logging.getLogger(logger_name)
     logger.setLevel(logging.DEBUG)
 
-    # 屏幕日志打印设置
-    console_handler = logging.StreamHandler()
-    console_handler.setFormatter(formatter)
-    console_handler.setLevel(logging.INFO)
-    logger.addHandler(console_handler)
+    if log_path:
+        # 补全文件夹
+        if log_path[-1] != '/':
+            log_path += '/'
 
-    if not os.path.exists('log'):
-        os.makedirs('log')
-    # 打开下面的输出到文件
-    file_handler = logging.FileHandler('log/error.log')
-    file_handler.setLevel(logging.ERROR)
-    file_handler.setFormatter(formatter)
-    file_handler2 = logging.FileHandler('log/debug.log')
-    file_handler2.setLevel(logging.DEBUG)
-    file_handler2.setFormatter(formatter)
+    if not logger.handlers:
+        # 屏幕日志打印设置
+        if console_log:
+            console_handler = logging.StreamHandler()
+            console_handler.setFormatter(formatter)
+            console_handler.setLevel(logging.INFO)
+            logger.addHandler(console_handler)
 
-    logger.setLevel(logging.INFO)
-    logger.addHandler(file_handler)
-    logger.addHandler(file_handler2)
+        if not os.path.exists(log_path + logger_name):
+            os.makedirs(log_path + logger_name)
+        # 打开下面的输出到文件
+        if critical_log:
+            log_handler = logging.FileHandler(
+                log_path + logger_name + '/critical.log'
+            )
+            log_handler.setLevel(logging.CRITICAL)
+            log_handler.setFormatter(formatter)
+            logger.addHandler(log_handler)
+        if error_log:
+            log_handler = logging.FileHandler(
+                log_path + logger_name + '/error.log'
+            )
+            log_handler.setLevel(logging.ERROR)
+            log_handler.setFormatter(formatter)
+            logger.addHandler(log_handler)
+        if warning_log:
+            log_handler = logging.FileHandler(
+                log_path + logger_name + '/warning.log'
+            )
+            log_handler.setLevel(logging.WARNING)
+            log_handler.setFormatter(formatter)
+            logger.addHandler(log_handler)
+        if info_log:
+            log_handler = logging.FileHandler(
+                log_path + logger_name + '/info.log'
+            )
+            log_handler.setLevel(logging.INFO)
+            log_handler.setFormatter(formatter)
+            logger.addHandler(log_handler)
+        if debug_log:
+            log_handler = logging.FileHandler(
+                log_path + logger_name + '/debug.log'
+            )
+            log_handler.setLevel(logging.DEBUG)
+            log_handler.setFormatter(formatter)
+            logger.addHandler(log_handler)
     return logger
 
 
@@ -255,7 +302,7 @@ def ws_parse(message, to_dict=False):
         if (len(data[0]) == 12):  # quotation
             wstype = 'quotation'
         elif ((data[0][-2:] == '_0') | (data[0][-2:] == '_1')):
-            wstype = 'deal'
+            wstype = 'transaction'
         elif (data[0][-6:] == 'orders'):
             wstype = 'orders'
         elif ((data[0][-2:] == '_i')):
@@ -274,14 +321,14 @@ def ws_parse(message, to_dict=False):
 
 def ws_parse_to_list(wstype, symbol, data, result, to_dict):
     data = data.split(',')
-    if wstype is 'deal':
+    if wstype is 'transaction':
         for d in data:
             x = list()
             x.append(wstype)
             x.append(symbol)
             x.extend(d.split('|'))
             if to_dict is True:
-                result.append(deal_to_dict(x))
+                result.append(transaction_to_dict(x))
             else:
                 result.append(x)
     else:
@@ -322,46 +369,45 @@ def quotation_to_dict(data):
             "symbol": data[1],  # "股票代码"
             "name": data[2],  # "中文名"
             # "datetime格式的日期时间"
-            # "昨收"
-            # "今开"
-            # "最高价"
-            # "最低价"
-            # "现价"
-            # "状态, PH=盘后，PZ=盘中，TP=停牌, WX=午休, LT=临时停牌,KJ=开盘集合竞价,PZ=连续竞价"
             "time": datetime.strptime(
                 data[3] + ' ' + data[4],
                 "%H:%M:%S %Y-%m-%d"
             ),
+            # "昨收"
             "last_close": float(data[5]),
+            # "今开"
             "open": float(data[6]),
+            # "最高价"
             "high": float(data[7]),
+            # "最低价"
             "low": float(data[8]),
+            # "现价"
             "now": float(data[9]),
+            # 状态：
+            # PH=盘后，PZ=盘中，TP=停牌,
+            # WX=午休, LT=临时停牌,KJ=开盘集合竞价,PZ=连续竞价
             "status": data[10],
-            "deal_count": float(data[11]),  # "成交笔数"
-            "total": int(data[12]),  # "成交总量"
-            "amount": float(data[13]),  # "总成交金额"
-            "current_ask": int(data[14]) if data[14] else 0,  # "当前委买总量"
+            "transaction_count": float(data[11]),  # "成交笔数"
+            "total_volume": int(data[12]),  # "成交总量"
+            "total_amount": float(data[13]),  # "总成交金额"
+            # "当前委买总金额"
+            "current_bid_amount": int(data[14]) if data[14] else 0,
             # "加权平均委买价格"
-            # "当前委卖总量"
+            "average_bid_price": float(data[15]) if data[15] else 0.0,
+            # "当前委卖总金额"
+            "current_ask_amount": int(data[16]) if data[16] else 0,
             # "加权平均委卖价格"
-            # "买入撤单笔数" ?
-            # "买入撤单量"?
-            # "买入撤单总金额"?
-            # "卖出撤单笔数" ?
-            "average_ask": float(data[15]) if data[15] else 0.0,
-            "current_bid": int(data[16]) if data[16] else 0,
-            "average_bid": float(data[17]) if data[17] else 0.0,
-            "cancel_ask_num": int(data[18]),
-            "cancel_ask_volumn": int(data[19]),
-            "cancel_ask_amount": float(data[20]),
-            "cancel_bid": int(data[21]),
-            "cancel_bid_volumn": int(data[22]),  # "卖出撤单量"?
-            "cancel_bid_amount": float(data[23]),  # "卖出撤单总金额"?
-            "total_ask": int(data[24]) if data[24] else 0,  # "委买总笔数"
-            "total_bid": int(data[25]) if data[25] else 0,  # "委卖总笔数"
-            "ask": data[26],  # "买档位"
-            "bid": data[27],  # "卖档位"
+            "average_ask_price": float(data[17]) if data[17] else 0.0,
+            "cancel_bid_num": int(data[18]),    # "买入撤单笔数"
+            "cancel_bid_amount": int(data[19]),  # "买入撤单金额"
+            "unknown_bid": float(data[20]),   # 不知道是什么
+            "cancel_ask": int(data[21]),    # "卖出撤单笔数"
+            "cancel_ask_amount": int(data[22]),  # "卖出撤金额"
+            "unknown_ask": float(data[23]),  # 不知道是什么
+            "total_bid": int(data[24]) if data[24] else 0,  # "委买总笔数"
+            "total_ask": int(data[25]) if data[25] else 0,  # "委卖总笔数"
+            # "bid": data[26],  # "买档位"肯定是10，不记录
+            # "ask": data[27],  # "卖档位"肯定是10，不记录
             "b1_price": float(data[28]) if data[28] else 0.0,  # 买1价
             "b2_price": float(data[29]) if data[29] else 0.0,  # 买2价
             "b3_price": float(data[30]) if data[30] else 0.0,  # 买3价
@@ -409,32 +455,29 @@ def quotation_to_dict(data):
             "symbol": data[1],  # "股票代码"
             "name": data[2],  # "中文名"
             # "datetime格式的日期时间"
-            # "昨收"
-            # "今开"
-            # "最高价"
-            # "最低价"
-            # "现价"
-            # "状态, PH=盘后，PZ=盘中，TP=停牌, WX=午休, LT=临时停牌,KJ=开盘集合竞价,PZ=连续竞价"
             "time": datetime.strptime(
                 data[3] + ' ' + data[4],
                 "%H:%M:%S %Y-%m-%d"
             ),
-            "last_close": float(data[5]),
-            "open": float(data[6]),
-            "high": float(data[7]),
-            "low": float(data[8]),
-            "now": float(data[9]),
+            "last_close": float(data[5]),  # "昨收"
+            "open": float(data[6]),  # "今开"
+            "high": float(data[7]),  # "最高价"
+            "low": float(data[8]),  # "最低价"
+            "now": float(data[9]),  # "现价"
+            # "状态,
+            # PH=盘后，PZ=盘中，TP=停牌, WX=午休,
+            # LT=临时停牌,KJ=开盘集合竞价,PZ=连续竞价"
             "status": data[10],
-            "deal_count": float(data[11]),  # "成交笔数"
+            "transaction_count": float(data[11]),  # "成交笔数"
             "total": int(data[12]),  # "成交总量"
             "amount": float(data[13]),  # "总成交金额"
         }
     return quotation
 
 
-def deal_to_dict(data):
-    deal = {
-        "data_type": 'deal',
+def transaction_to_dict(data):
+    transaction = {
+        "data_type": 'transaction',
         "symbol": data[1],   # 股票代码
         "index": data[2],  # 成交序号
         "time": data[3],   # 时间，字符串格式，不带日期
@@ -446,7 +489,7 @@ def deal_to_dict(data):
         "iotype": int(data[9]),  # 主动性买卖标识
         "channel": int(data[10]),  # 成交通道（这是交易所的一个标记，没有作用）
     }
-    return deal
+    return transaction
 
 
 def symbol_type(symbol):
