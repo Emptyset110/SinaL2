@@ -4,9 +4,9 @@ try:
 except ImportError:
     pass
 try:
-    import dHydra.core.util as util
+	from . import util
 except ImportError:
-    from . import util
+    import dHydra.core.util as util
 try:
     from SinaL2.Sina.Sina import Sina
 except ImportError:
