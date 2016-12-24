@@ -1,5 +1,37 @@
-/SinaL2.egg-info/*
-/dist/*
-__pycache__/
-/log/*
-*.pyc
+# C extensions
+*.so
+*.dll
+
+# Packages
+__pycache__
+log
+*.egg
+*.egg-info
+dist
+build
+eggs
+parts
+bin
+var
+sdist
+develop-eggs
+.installed.cfg
+lib
+lib64
+.idea
+
+# Installer logs
+pip-log.txt
+
+# Unit test / coverage reports
+.coverage
+.tox
+nosetests.xml
+
+# Translations
+*.mo
+
+# Mr Developer
+.mr.developer.cfg
+.project
+.pydevproject

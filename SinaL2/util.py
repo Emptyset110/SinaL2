@@ -348,17 +348,37 @@ def ws_parse_to_list(wstype, symbol, data, result, to_dict):
     return result
 
 
-def orders_to_dict(orders):
+def info_to_dict(data):
+    return data
+
+def orders_to_dict(data):
     """
     return
     ------
     """
+    try:
+        orders = {
+            "data_type": "orders",
+            "symbol": data[1],
+            "time": data[3],
+            "bid_price": float(data[4]),
+            "bid_volume": int(data[5]),
+            "bid_num": int(data[6]),
+            "ask_price": float(data[7]),
+            "ask_volume": int(data[8]),
+            "ask_num": int(data[9]),
+            "bid_orders": data[10].split("|"),
+            "ask_orders": data[12].split("|")
+        }
+    except ValueError:
+        return {}
     return orders
 
 
 def quotation_to_dict(data):
     """
     整个转换大约耗时1*10^(-4)s, 其中datetime.strptime()占用较多耗时
+        根据Issue #5，"time"不再用strptime来转化
     return
     ------
     """
@@ -369,9 +389,13 @@ def quotation_to_dict(data):
             "symbol": data[1],  # "股票代码"
             "name": data[2],  # "中文名"
             # "datetime格式的日期时间"
-            "time": datetime.strptime(
-                data[3] + ' ' + data[4],
-                "%H:%M:%S %Y-%m-%d"
+            "time": datetime(
+                int(data[4][0:4]),
+                int(data[4][5:7]),
+                int(data[4][8:10]),
+                int(data[3][0:2]),
+                int(data[3][3:5]),
+                int(data[3][6:8])
             ),
             # "昨收"
             "last_close": float(data[5]),
