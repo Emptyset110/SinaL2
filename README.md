@@ -31,15 +31,27 @@ cd SinaL2
 
 ## 使用范例
 ```python
+# -*- coding: utf-8 -*-
 from SinaL2 import SinaL2
+import threading
+import time
+import SinaL2.util as util
 
-# 这是websocket收到数据以后的回调函数，将它传入SinaL2即可
+
 def on_recv_data(message):
-    print(message)
+    print(util.ws_parse(message=message, to_dict=True))
+    # 这里用util.ws_parse来解析字符串了，并且转为一个包含dict的list输出
 
-# symbols为传入的代码list，list长度任意
-sina_l2 = SinaL2(symbols=["sz000001"], on_recv_data = on_recv_data)
-sina_l2.start()
+def start_sina_l2():
+    sina_l2 = SinaL2(symbols=["sz000001","sh600221"], on_recv_data=on_recv_data, query=["quotation","transaction","orders"])
+    sina_l2.start()
+
+t = threading.Thread(target=start_sina_l2, daemon=True)
+t.start()
+
+while True:
+    # 目的是让主线程不退出
+    time.sleep(10)
 ```
 
 > 详细参数说明还是参考( https://github.com/Emptyset110/dHydra )或者( http://doc.dhydra.org )
