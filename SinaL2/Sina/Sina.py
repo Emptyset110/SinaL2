@@ -370,7 +370,7 @@ class Sina(Vendor):
             todayAll = DataFrame(todayAll)
         return todayAll
 
-    def get_symbols(self, stockTypeList=["hs_a", "hs_b"]):
+    def get_symbols(self, stockTypeList=["hs_a", "hs_b"], dataframe=True):
         """
         用于获取当日股票列表
         返回： list
@@ -381,8 +381,13 @@ class Sina(Vendor):
         """
         symbolList = list()
         for node in stockTypeList:
-            symbols = list(self.get_today_all(node=node)["symbol"])
-            symbolList.extend(symbols)
+            if dataframe:
+                symbols = list(self.get_today_all(node=node)["symbol"])
+                symbolList.extend(symbols)
+            else:
+                today_all = self.get_today_all(node=node)
+                for i in today_all:
+                    symbolList.append(i["symbol"])
         return symbolList
 
     def get_quote(self, symbols, dataframe=True):
