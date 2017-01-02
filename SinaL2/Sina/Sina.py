@@ -29,21 +29,27 @@ import os
 
 class Sina(Vendor):
 
-    def __init__(self, username=None, pwd=None, **kwargs):
+    def __init__(self, username=None, pwd=None, login=False, **kwargs):
         super().__init__(**kwargs)
         config = util.read_config(os.getcwd() + "/sina.json")
-        if (username is None):
+        if username is None:
             if "username" in config.keys():
                 self.username = config["username"]
             else:
-                self.username = input('请输入新浪登录帐号：')
+                if login:
+                    self.username = input('请输入新浪登录帐号：')
+                else:
+                    self.username = None
         else:
             self.username = username
-        if (pwd is None):
+        if pwd is None:
             if "password" in config.keys():
                 self.pwd = config["password"]
             else:
-                self.pwd = getpass.getpass("输入登录密码（密码不会显示在屏幕上，输入后按回车确定）:")
+                if login:
+                    self.pwd = getpass.getpass("输入登录密码（密码不会显示在屏幕上，输入后按回车确定）:")
+                else:
+                    self.username = None
         else:
             self.pwd = pwd
         self.rsa_pubkey = '10001'

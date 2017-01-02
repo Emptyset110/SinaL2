@@ -12,6 +12,10 @@ import threading
 import re
 
 
+class NotLoginError(Exception):
+    def __init__(self):
+        super().__init__()
+
 class SinaL2:
 
     def __init__(
@@ -20,8 +24,7 @@ class SinaL2:
         pwd=None,
         symbols=None,
         hq='hq_pjb',
-        query=['quotation', 'transaction'],
-        # ['quotation', 'orders', 'transaction', 'info']
+        query=['quotation', 'transaction', "orders"],
         on_recv_data=None,   # 收到数据以后的回调函数
         use_logger=True,
         **kwargs
@@ -35,8 +38,10 @@ class SinaL2:
         if use_logger:
             self.logger = util.get_logger(self.__class__.__name__)
 
-        self.sina = Sina()
+        self.sina = Sina(login=True)
         self.is_login = self.login()
+        if not self.is_login:
+            raise NotLoginError
 
         if symbols is None:
             self.symbols = self.sina.get_symbols()
@@ -104,7 +109,8 @@ class SinaL2:
                     retry = False
                 else:
                     self.logger.warning("{},{}".format(response, qlist))
-                    if response["msg_code"] == -11:
+                    if response["msg_code"] == -1 or \
+                                    response["msg_code"] == -11:
                         time.sleep(2)
                         self.logger.warning("尝试重新登录新浪")
                         self.sina.login(verify=False)

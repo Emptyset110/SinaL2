@@ -16,7 +16,6 @@ import re
 import json
 import logging
 
-
 def get_logger(
     logger_name="main",
     log_path="log",                     #
@@ -123,8 +122,27 @@ def symbols_to_string(symbols):
 用于解析Sina l2的函数
 """
 
+def get_trading_date():
+    from .Sina.Sina import Sina
+    import datetime
+    sina = Sina(username=None, pwd=None)
+    sh000300 = sina.get_quote(symbols=["sh000300"])
+    sh000300_date = sh000300.iloc[0].date
 
-def ws_parse(message, to_dict=False):
+    return sh000300_date
+
+
+trading_date = get_trading_date()
+
+
+def ws_parse(message, trading_date=trading_date, to_dict=False):
+    """
+    trading_date 最好外部传入
+    :param message:
+    :param trading_date:
+    :param to_dict:
+    :return:
+    """
     data_list = re.findall(
         r'(?:((?:2cn_)?((?:sh|sz)[\d]{6})'
         r'(?:_0|_1|_orders|_i)?)(?:=)(.*)(?:\n))',
@@ -146,13 +164,14 @@ def ws_parse(message, to_dict=False):
             wstype=wstype,
             symbol=data[1],
             data=data[2],
+            trading_date=trading_date,
             result=result,
             to_dict=to_dict
         )
     return result
 
 
-def ws_parse_to_list(wstype, symbol, data, result, to_dict):
+def ws_parse_to_list(wstype, symbol, data, trading_date, result, to_dict):
     data = data.split(',')
     if wstype is 'transaction':
         for d in data:
@@ -161,7 +180,7 @@ def ws_parse_to_list(wstype, symbol, data, result, to_dict):
             x.append(symbol)
             x.extend(d.split('|'))
             if to_dict is True:
-                result.append(transaction_to_dict(x))
+                result.append(transaction_to_dict(x, trading_date))
             else:
                 result.append(x)
     else:
@@ -175,13 +194,13 @@ def ws_parse_to_list(wstype, symbol, data, result, to_dict):
             # elif wstype is 'info':
             #     result.append(info_to_dict(x))
             elif wstype is 'orders':
-                result.append(orders_to_dict(x))
+                result.append(orders_to_dict(x, trading_date))
         else:
             result.append(x)
     return result
 
 
-def orders_to_dict(data):
+def orders_to_dict(data, trading_date=trading_date):
     """
     return
     ------
@@ -190,7 +209,14 @@ def orders_to_dict(data):
         orders = {
             "data_type": "orders",
             "symbol": data[1],
-            "time": data[3],
+            "time": datetime(
+                int(trading_date[0:4]),
+                int(trading_date[5:7]),
+                int(trading_date[8:10]),
+                int(data[3][0:2]),
+                int(data[3][3:5]),
+                int(data[3][6:8])
+            ),  # 时间 datetime格式
             "bid_price": float(data[4]),
             "bid_volume": int(data[5]),
             "bid_num": int(data[6]),
@@ -334,12 +360,21 @@ def quotation_to_dict(data):
     return quotation
 
 
-def transaction_to_dict(data):
+def transaction_to_dict(data, trading_date=trading_date):
     transaction = {
         "data_type": 'transaction',
         "symbol": data[1],   # 股票代码
         "index": data[2],  # 成交序号
-        "time": data[3],   # 时间，字符串格式，不带日期
+        "time": datetime(
+            int(trading_date[0:4]),
+            int(trading_date[5:7]),
+            int(trading_date[8:10]),
+            int(data[3][0:2]),
+            int(data[3][3:5]),
+            int(data[3][6:8]),
+            int(data[3][9:])*1000
+        ),  # 时间 datetime格式
+        # "time": data[3],   # 时间，字符串格式，不带日期
         "price":  float(data[4]),  # 成交价格
         "volume": int(data[5]),  # 成交量
         "amount": float(data[6]),  # 成交金额
@@ -349,6 +384,7 @@ def transaction_to_dict(data):
         "channel": int(data[10]),  # 成交通道（这是交易所的一个标记，没有作用）
     }
     return transaction
+
 
 def read_config(file_path):
     # 读取配置
@@ -363,4 +399,3 @@ def read_config(file_path):
             .format(file_path)
         )
     return cfg
-
