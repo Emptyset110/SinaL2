@@ -1,32 +1,15 @@
 # -*- coding: utf-8 -*-
-try:
-    from dHydra.core.Functions import *
-except ImportError:
-    pass
-try:
-    from . import util
-except ImportError:
-    import dHydra.core.util as util
-try:
-    from SinaL2.Sina.Sina import Sina
-except ImportError:
-    pass
+from . import util
+from .Sina.Sina import Sina
+
 from datetime import datetime
 from .connection import *
 import time
-import requests
 import websockets
-import getpass
-import base64
-import rsa
-import binascii
 import json
 import asyncio
 import threading
-import functools
 import re
-import gc
-import os
 
 
 class SinaL2:
@@ -52,12 +35,7 @@ class SinaL2:
         if use_logger:
             self.logger = util.get_logger(self.__class__.__name__)
 
-        # 如果是dHydra框架内调用，则直接用框架内的Sina类，
-        # 否则作为独立的类在外部调用
-        try:
-            self.sina = get_vendor('Sina')
-        except Exception as e:
-            self.sina = Sina()
+        self.sina = Sina()
         self.is_login = self.login()
 
         if symbols is None:
@@ -209,8 +187,10 @@ class SinaL2:
         weight = (len(self.query) +
                   1) if ('transaction' in self.query) else len(self.query)
         step = int(64 / weight)
-        symbol_list_slice = [symbol_list[i: i + step]
-                             for i in range(0, len(symbol_list), step)]
+        symbol_list_slice = [
+            symbol_list[i: i + step]
+            for i in range(0, len(symbol_list), step)
+        ]
 
         tasks = list()
         for symbol_list in symbol_list_slice:

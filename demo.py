@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-from SinaL2 import SinaL2
+from SinaL2.SinaL2 import SinaL2
 import threading
 import time
 import SinaL2.util as util
