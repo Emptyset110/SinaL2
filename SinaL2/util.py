@@ -122,24 +122,21 @@ def symbols_to_string(symbols):
 用于解析Sina l2的函数
 """
 
+
 def get_trading_date():
-    from .Sina.Sina import Sina
-    import datetime
-    sina = Sina(username=None, pwd=None)
+    from dHydra.core.Functions import get_vendor
+    sina = get_vendor("Sina")
     sh000300 = sina.get_quote(symbols=["sh000300"])
     sh000300_date = sh000300.iloc[0].date
 
     return sh000300_date
 
 
-trading_date = get_trading_date()
-
-
-def ws_parse(message, trading_date=trading_date, to_dict=False):
+def ws_parse(message, trading_date, to_dict=False):
     """
     trading_date 最好外部传入
     :param message:
-    :param trading_date:
+    :param trading_date: e.g."2016-12-30"
     :param to_dict:
     :return:
     """
@@ -180,7 +177,9 @@ def ws_parse_to_list(wstype, symbol, data, trading_date, result, to_dict):
             x.append(symbol)
             x.extend(d.split('|'))
             if to_dict is True:
-                result.append(transaction_to_dict(x, trading_date))
+                t = transaction_to_dict(x, trading_date)
+                if t is not None:
+                    result.append(t)
             else:
                 result.append(x)
     else:
@@ -200,7 +199,7 @@ def ws_parse_to_list(wstype, symbol, data, trading_date, result, to_dict):
     return result
 
 
-def orders_to_dict(data, trading_date=trading_date):
+def orders_to_dict(data, trading_date):
     """
     return
     ------
@@ -360,30 +359,33 @@ def quotation_to_dict(data):
     return quotation
 
 
-def transaction_to_dict(data, trading_date=trading_date):
-    transaction = {
-        "data_type": 'transaction',
-        "symbol": data[1],   # 股票代码
-        "index": data[2],  # 成交序号
-        "time": datetime(
-            int(trading_date[0:4]),
-            int(trading_date[5:7]),
-            int(trading_date[8:10]),
-            int(data[3][0:2]),
-            int(data[3][3:5]),
-            int(data[3][6:8]),
-            int(data[3][9:])*1000
-        ),  # 时间 datetime格式
-        # "time": data[3],   # 时间，字符串格式，不带日期
-        "price":  float(data[4]),  # 成交价格
-        "volume": int(data[5]),  # 成交量
-        "amount": float(data[6]),  # 成交金额
-        "buynum": int(data[7]),  # 买单委托序号
-        "sellnum": int(data[8]),  # 卖单委托序号
-        "iotype": int(data[9]),  # 主动性买卖标识
-        "channel": int(data[10]),  # 成交通道（这是交易所的一个标记，没有作用）
-    }
-    return transaction
+def transaction_to_dict(data, trading_date):
+    if len(data) == 11:
+        transaction = {
+            "data_type": 'transaction',
+            "symbol": data[1],   # 股票代码
+            "index": data[2],  # 成交序号
+            "time": datetime(
+                int(trading_date[0:4]),
+                int(trading_date[5:7]),
+                int(trading_date[8:10]),
+                int(data[3][0:2]),
+                int(data[3][3:5]),
+                int(data[3][6:8]),
+                int(data[3][9:])*1000
+            ),  # 时间 datetime格式
+            # "time": data[3],   # 时间，字符串格式，不带日期
+            "price":  float(data[4]),  # 成交价格
+            "volume": int(data[5]),  # 成交量
+            "amount": float(data[6]),  # 成交金额
+            "buynum": int(data[7]),  # 买单委托序号
+            "sellnum": int(data[8]),  # 卖单委托序号
+            "iotype": int(data[9]),  # 主动性买卖标识
+            "channel": int(data[10]),  # 成交通道（这是交易所的一个标记，没有作用）
+        }
+        return transaction
+    else:
+        return None
 
 
 def read_config(file_path):
