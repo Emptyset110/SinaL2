@@ -4,9 +4,10 @@ import threading
 import time
 import SinaL2.util as util
 
+trading_date = util.get_trading_date()
 
 def on_recv_data(message):
-    print(util.ws_parse(message=message, to_dict=True))
+    print(util.ws_parse(message=message, to_dict=True, trading_date=trading_date))
 
 
 def start_sina_l2():
