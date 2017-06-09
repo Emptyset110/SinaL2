@@ -3,17 +3,17 @@ import time
 # 高速行情接口
 URL_QUOTATION = lambda symbols: "http://hq.sinajs.cn/?rn=%s&list=%s" % ( int( time.time() )*1000, symbols )
 
-SINA_QUOTE_COLUMNS = [	'name', 'open'
-					,	'pre_close', 'price', 'high', 'low', 'bid', 'ask', 'volume', 'amount'
-					,	'b1_v',	'b1_p', 'b2_v', 'b2_p', 'b3_v', 'b3_p', 'b4_v', 'b4_p', 'b5_v', 'b5_p'
-					,	'a1_v',	'a1_p', 'a2_v', 'a2_p', 'a3_v', 'a3_p', 'a4_v', 'a4_p', 'a5_v', 'a5_p'
-					,	'date', 'time', 'ms']
+SINA_QUOTE_COLUMNS = [
+    'name', 'open', 'pre_close', 'price', 'high', 'low', 'bid', 'ask', 'volume', 'amount', 'b1_v', 'b1_p', 'b2_v',
+    'b2_p', 'b3_v', 'b3_p', 'b4_v', 'b4_p', 'b5_v', 'b5_p' ,'a1_v',	'a1_p', 'a2_v', 'a2_p', 'a3_v', 'a3_p', 'a4_v',
+    'a4_p', 'a5_v', 'a5_p' ,'date', 'time', 'ms'
+]
 
-SINA_QUOTE_COLUMNS_2 = [	'name', 'open'
-					,	'pre_close', 'price', 'high', 'low', 'bid', 'ask', 'volume', 'amount'
-					,	'b1_v',	'b1_p', 'b2_v', 'b2_p', 'b3_v', 'b3_p', 'b4_v', 'b4_p', 'b5_v', 'b5_p'
-					,	'a1_v',	'a1_p', 'a2_v', 'a2_p', 'a3_v', 'a3_p', 'a4_v', 'a4_p', 'a5_v', 'a5_p'
-					,	'date', 'time', 'ms', 'symbol']
+SINA_QUOTE_COLUMNS_2 = [
+    'name', 'open', 'pre_close', 'price', 'high', 'low', 'bid', 'ask', 'volume', 'amount',
+    'b1_v',	'b1_p', 'b2_v', 'b2_p', 'b3_v', 'b3_p', 'b4_v', 'b4_p', 'b5_v', 'b5_p',
+    'a1_v',	'a1_p', 'a2_v', 'a2_p', 'a3_v', 'a3_p', 'a4_v', 'a4_p', 'a5_v', 'a5_p',	'date', 'time', 'ms', 'symbol'
+]
 
 DATA_LOGIN = lambda su,servertime,nonce,rsakv,sp,door: {
 	"entry"			:	"finance"
@@ -70,7 +70,7 @@ PARAM_L2HIST = lambda symbol,page,stime,etime: {
 ,	"_"					:	int(time.time()*1000)
 }
 HEADERS_GET_TODAY_ALL = {
-	"Accept":"text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8"
+	"Accept":"*/*"
 ,	"Accept-Encoding" 	: "gzip, deflate, sdch"
 ,	"Accept-Language"	: "en-US,en;q=0.8"
 ,	"Cache-Control"		: "max-age=0"
@@ -79,6 +79,19 @@ HEADERS_GET_TODAY_ALL = {
 ,	"Upgrade-Insecure-Requests":"1"
 ,	"User-Agent":"Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/50.0.2661.86 Safari/537.36"
 }
+HEADERS_NODE_STOCK_COUNT = {
+	"Accept": "*/*",
+    "Content-type": "application/x-www-form-urlencoded",
+    "Accept-Encoding": "gzip, deflate, sdch",
+    "Accept-Language"	: "en-US,en;q=0.8",
+    "Cache-Control"		: "max-age=0",
+    "Connection"		: "keep-alive",
+    "Host"				: "vip.stock.finance.sina.com.cn",
+    "Referer": "http://vip.stock.finance.sina.com.cn/mkt/",
+    "Upgrade-Insecure-Requests": "1",
+    "User-Agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/50.0.2661.86 Safari/537.36"
+}
+
 HEADERS_LOGIN = {
 	"Accept" : '*/*'
 ,	"Accept-Encoding" : 'gzip, deflate, sdch'
@@ -113,9 +126,12 @@ CROSSDOMAIN_HOST = [
 ,	"passport.weibo.cn"
 ]
 URL_L2HIST = 'http://stock.finance.sina.com.cn/stock/api/openapi.php/StockLevel2Service.getTransactionList'
+
 # 获取
-URL_API_MARKET_CENTER_GETHQNODEDATA = lambda node: "http://vip.stock.finance.sina.com.cn/quotes_service/api/json_v2.php/Market_Center.getHQNodeData?num=5000&sort=symbol&asc=0&node=%s&symbol=&_s_r_a=page&page=1" % node
-# node = hs_a, hs_b
+URL_API_MARKET_CENTER_GETHQNODEDATA = lambda page_num, node:\
+    "http://money.finance.sina.com.cn/quotes_service/api/json_v2.php/" \
+    "Market_Center.getHQNodeData?page=%s&num=100&sort=symbol&asc=1&node=%s&symbol=&_s_r_a=init" % (page_num, node)
+
 # 数据格式中key缺少双引号
 # [
 # 	{

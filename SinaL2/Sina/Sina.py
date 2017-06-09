@@ -55,6 +55,7 @@ class Sina(Vendor):
         self.rsa_pubkey = '10001'
         self.ip = util.get_client_ip()
         self.session = requests.Session()
+        self.session.get("http://vip.stock.finance.sina.com.cn/mkt/")
         self.quote = None
         self.is_login = False
 
@@ -303,75 +304,101 @@ class Sina(Vendor):
             )
         return quote
 
+    def node_stock_count(self, node):
+        url = "http://money.finance.sina.com.cn/quotes_service/api/json_v2.php/Market_Center.getHQNodeStockCount?node={}".format(node)
+        retry = 0
+        while retry < 3:
+            try:
+                print(url)
+                response = self.session.get(
+                    url,
+                    headers=HEADERS_NODE_STOCK_COUNT
+                ).text
+                result = re.findall(r'\d+', response)
+                return int(result[0])
+            except TimeoutError as e:
+                self.logger.warning("sina.get_stock_count 网络超时, 将重试")
+        self.logger.error("sina.get_stock_count 网络超时3次")
+        return 0
+
+
     # 新浪获取当前全部股票的接口
     # 如果 dataframe = True， 则返回panda.DataFrame格式，
     # 否则 返回list格式，每个list中是一个dict
-    def get_today_all(self, node='hs_a', dataframe=True):
+    def get_today_all(self, node='sh_a,sz_a', dataframe=True):
         import json
         import time
 
-        # start = time.time()
-        retry = True
-        while retry:
-            try:
-                response = self.session.get(
-                    URL_API_MARKET_CENTER_GETHQNODEDATA(node),
-                    headers=HEADERS_GET_TODAY_ALL,
-                    timeout=3
-                ).text
-                retry = False
-            except Exception as e:
-                print(e)
-                print("正在重试...")
-        # 因为返回的json不标准，需要给key加上引号
-        response = response.replace(
-            "symbol", "\"symbol\""
-        ).replace(
-            "code", "\"code\""
-        ).replace(
-            "name", "\"name\""
-        ).replace(
-            "trade", "\"trade\""
-        ).replace(
-            "pricechange", "\"pricechange\""
-        ).replace(
-            "pricepercent", "\"pricepercent\""
-        ).replace(
-            "buy", "\"buy\""
-        ).replace(
-            "sell", "\"sell\""
-        ).replace(
-            "settlement", "\"settlement\""
-        ).replace(
-            "open", "\"open\""
-        ).replace(
-            "high", "\"high\""
-        ).replace(
-            "low", "\"low\""
-        ).replace(
-            "volume", "\"volume\""
-        ).replace(
-            "amount", "\"amount\""
-        ).replace(
-            "ticktime", "\"ticktime\""
-        ).replace(
-            "per", "\"per\""
-        ).replace(
-            "pb", "\"pb\""
-        ).replace(
-            "mktcap", "\"mktcap\""
-        ).replace(
-            "nmc", "\"nmc\""
-        ).replace(
-            "turnoverratio", "\"turnoverratio\""
-        ).replace("change\"per\"cent", "\"changepercent\"")
-        # print(time.time()-start)
-        todayAll = json.loads(response)
+        nodes = node.split(",")
+        print("请求获取: ", nodes)
+        today_all = None
+        for node in nodes:
+            count = self.node_stock_count(node)
+            for page_num in range(1, count // 100 + 2):
+                print("正在爬取{}, 第{}页...".format(node, page_num))
+                retry = True
+                while retry:
+                    try:
+                        response = self.session.get(
+                            URL_API_MARKET_CENTER_GETHQNODEDATA(page_num, node),
+                            headers=HEADERS_GET_TODAY_ALL
+                        ).text
+                        retry = False
+                    except Exception as e:
+                        print(e)
+                        print("正在重试...")
+                # 因为返回的json不标准，需要给key加上引号
+                response = response.replace(
+                    "symbol", "\"symbol\""
+                ).replace(
+                    "code", "\"code\""
+                ).replace(
+                    "name", "\"name\""
+                ).replace(
+                    "trade", "\"trade\""
+                ).replace(
+                    "pricechange", "\"pricechange\""
+                ).replace(
+                    "pricepercent", "\"pricepercent\""
+                ).replace(
+                    "buy", "\"buy\""
+                ).replace(
+                    "sell", "\"sell\""
+                ).replace(
+                    "settlement", "\"settlement\""
+                ).replace(
+                    "open", "\"open\""
+                ).replace(
+                    "high", "\"high\""
+                ).replace(
+                    "low", "\"low\""
+                ).replace(
+                    "volume", "\"volume\""
+                ).replace(
+                    "amount", "\"amount\""
+                ).replace(
+                    "ticktime", "\"ticktime\""
+                ).replace(
+                    "per", "\"per\""
+                ).replace(
+                    "pb", "\"pb\""
+                ).replace(
+                    "mktcap", "\"mktcap\""
+                ).replace(
+                    "nmc", "\"nmc\""
+                ).replace(
+                    "turnoverratio", "\"turnoverratio\""
+                ).replace("change\"per\"cent", "\"changepercent\"")
+                # print(time.time()-start)
+                if today_all is None:
+                    today_all = json.loads(response)
+                else:
+                    today_all.extend(json.loads(response))
         if dataframe:
-            todayAll = DataFrame(todayAll)
-        return todayAll
+            today_all = DataFrame(today_all)
+        return today_all
 
-    def get_symbols(self, stockTypeList=["hs_a", "hs_b"], dataframe=True):
+    def get_symbols(self, stockTypeList=["sh_a", "sz_a"], dataframe=True):
         """
         用于获取当日股票列表
         返回： list
